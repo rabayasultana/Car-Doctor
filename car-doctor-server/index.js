@@ -10,7 +10,11 @@ const port = process.env.PORT || 5000;
 // middleware
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:5174"],
+    origin: [
+      "http://localhost:5173",
+      "https://cars-doctor-cf6d4.web.app",
+      "https://cars-doctor-cf6d4.firebaseapp.com"
+    ],
     credentials: true,
   })
 );
@@ -52,6 +56,12 @@ const verifyToken = async (req, res, next) => {
   })
 };
 
+const cookieOption = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production"? true : false,
+  sameSite: process.env.NODE_ENV === "production"? "none" : "strict",
+}
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -70,12 +80,15 @@ async function run() {
       });
 
       res
-        .cookie("token", token, {
-          httpOnly: true,
-          secure: false,
-        })
+        .cookie("token", token,  cookieOption)
         .send({ success: true });
     });
+
+    app.post('/logout', async(req, res) => {
+      const user = req.body;
+      console.log('logging out', user)
+      res.clearCookie('token',  {...cookieOption, maxAge: 0}).send({ success: true });    
+    })
 
     // service related data
     app.get("/services", logger, async (req, res) => {
@@ -146,9 +159,9 @@ async function run() {
 
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!"
+    // );
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
